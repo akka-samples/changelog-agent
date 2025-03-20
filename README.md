@@ -18,3 +18,8 @@ Periodically polls the latest release from a github repository, when there is a 
 a summary of the changes is created.
 
 ## Design overview
+
+## Running the sample
+
+To interact with the Anthropic LLM the environment variables ANTHROPIC_API_KEY and or ANTHROPIC_AUTH_TOKEN must be set
+to tokens gotten from the 

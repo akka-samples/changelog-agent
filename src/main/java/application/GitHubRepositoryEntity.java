@@ -1,6 +1,7 @@
 package application;
 
 import akka.Done;
+import akka.javasdk.annotations.ComponentId;
 import akka.javasdk.eventsourcedentity.EventSourcedEntity;
 import domain.RepositoryEvent;
 import domain.RepositoryIdentifier;
@@ -11,6 +12,7 @@ import java.util.Set;
 
 import static akka.Done.done;
 
+@ComponentId("github-repository")
 public class GitHubRepositoryEntity extends EventSourcedEntity<RepositoryState, RepositoryEvent> {
 
   public static String entityIdFor(String organization, String repository) {

@@ -64,6 +64,9 @@ public final class GitHubApiClient {
   }
 
   public CompletionStage<List<ReleaseDetails>> listLast5Releases(String owner, String repository) {
+    // https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#list-releases
+    // FIXME use get latest release instead
+    //    https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#get-the-latest-release
     return httpClient.GET("/repos/" + owner + "/" + repository + "/releases")
         .withHeaders(
             Arrays.asList(
@@ -84,6 +87,7 @@ public final class GitHubApiClient {
   }
 
   public CompletionStage<IssueDetails> getDetails(String owner, String repository, String issueNumber) {
+    // https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#get-an-issue
     return httpClient.GET("/repos/" + owner + "/" + repository + "/issues/" + issueNumber)
         .withHeaders(Arrays.asList(
             USER_AGENT,
