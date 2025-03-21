@@ -23,3 +23,22 @@ a summary of the changes is created.
 
 To interact with the Anthropic LLM the environment variables ANTHROPIC_API_KEY and or ANTHROPIC_AUTH_TOKEN must be set
 to tokens gotten from the 
+
+
+### Interacting with the sample
+
+Set up a repository for tracking:
+
+```shell
+curl http://localhost:9000/repo/akka/akka-sdk \
+  --header "Content-Type: application/json" \
+  -XPOST \
+  --data '{"targetSummaryAudiences":[]}'
+```
+
+Trigger a one-off summary of the latest release:
+
+```shell
+curl http://localhost:9000/testing/repo/akka/akka-sdk/summarize-latest \
+  -XPOST
+```

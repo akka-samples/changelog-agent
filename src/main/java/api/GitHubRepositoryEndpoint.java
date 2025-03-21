@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 
-// Opened up for access from the public internet to make the service easy to try out.
-// For actual services meant for production this must be carefully considered, and often set more limited
 @Acl(allow = @Acl.Matcher(principal = Acl.Principal.INTERNET))
 @HttpEndpoint("/repo")
 public class GitHubRepositoryEndpoint extends AbstractHttpEndpoint {
@@ -41,19 +39,5 @@ public class GitHubRepositoryEndpoint extends AbstractHttpEndpoint {
         .invokeAsync(new GitHubRepositoryEntity.SetUpRepository(owner, repo, createRepository.targetSummaryAudiences))
         .thenApply(ignored -> "Repository set up successful");
   }
-
-  // test endpoints for now
-  @Get("/{owner}/{repo}/issues/{issue}")
-  public CompletionStage<String> getIssue(String owner, String repo, String issue) {
-    return gitHubApiClient.getDetails(owner, repo, issue)
-        .thenApply(GitHubApiClient.IssueDetails::body);
-  }
-
-  @Get("/{owner}/{repo}/releases")
-  public CompletionStage<List<GitHubApiClient.ReleaseDetails>> getReleases(String owner, String repo) {
-    return gitHubApiClient.listLast5Releases(owner, repo);
-  }
-
-
 
 }
