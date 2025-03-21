@@ -65,8 +65,6 @@ public final class GitHubApiClient {
 
   public CompletionStage<List<ReleaseDetails>> listLast5Releases(String owner, String repository) {
     // https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#list-releases
-    // FIXME use get latest release instead
-    //    https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#get-the-latest-release
     return httpClient.GET("/repos/" + owner + "/" + repository + "/releases")
         .withHeaders(
             Arrays.asList(
@@ -82,6 +80,20 @@ public final class GitHubApiClient {
             throw new RuntimeException("Failed to parse github api response", e);
           }
         })
+        .invokeAsync()
+        .thenApply(StrictResponse::body);
+  }
+
+  public CompletionStage<ReleaseDetails> getLatestRelease(String owner, String repository) {
+    // https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#get-the-latest-release
+    return httpClient.GET("/repos/" + owner + "/" + repository + "/releases/latest")
+        .withHeaders(
+            Arrays.asList(
+                USER_AGENT,
+                Accept.create(MediaRanges.create(MediaTypes.applicationWithOpenCharset("vnd.github+json"))),
+                GITHUB_API_VERSION
+            )
+        ).responseBodyAs(ReleaseDetails.class)
         .invokeAsync()
         .thenApply(StrictResponse::body);
   }

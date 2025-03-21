@@ -1,4 +1,6 @@
 package domain;
 
-public final class SummaryState {
+import integration.GitHubApiClient;
+
+public record SummaryState(RepositoryIdentifier repositoryIdentifier, GitHubApiClient.ReleaseDetails releaseDetails) {
 }
