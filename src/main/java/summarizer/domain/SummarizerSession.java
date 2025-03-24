@@ -137,10 +137,11 @@ public final class SummarizerSession {
           .map(TextBlock::text)
           .reduce("", (str1, str2) -> str1 + str2);
 
+      var tokensUsed = "(tokens used: in: " + response.usage().inputTokens() + ", out: " + response.usage().outputTokens() + ")";
       if (logger.isDebugEnabled()) {
-        debugLog("Summary: " + summaryText);
+        debugLog("Summary " + tokensUsed + ": " + summaryText);
       } else {
-        infoLog("Summary complete");
+        infoLog("Summary complete " + tokensUsed);
       }
       if (summaryText.isBlank()) throw new RuntimeException("Empty response");
       else {
