@@ -1,4 +1,4 @@
-package domain;
+package summarizer.domain;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -10,16 +10,16 @@ import java.util.Set;
 public final class RepositoryState {
 
   final Instant creationDate;
-  final Set<String> targetSummaryAudiences;
   // GitHub release id:s
   final Set<Long> seenReleases;
   final List<ReleaseSummary> summaries;
+  final Optional<String> gitHubApiToken;
 
-  public RepositoryState(Instant creationDate, Set<String> targetSummaryAudiences) {
+  public RepositoryState(Instant creationDate, Optional<String> gitHubApiToken) {
     this.creationDate = creationDate;
-    this.targetSummaryAudiences = targetSummaryAudiences;
     this.seenReleases = new HashSet<>();
     this.summaries = new ArrayList<>();
+    this.gitHubApiToken = gitHubApiToken;
   }
 
   public Optional<Long> getLatestSeenRelease() {
@@ -27,8 +27,20 @@ public final class RepositoryState {
   }
 
   public RepositoryState addSummary(RepositoryEvent.SummaryAdded summaryAdded) {
+    // FIXME limit the number we keep around
     summaries.addFirst(summaryAdded.summary());
     seenReleases.add(summaryAdded.summary().githubReleaseId());
     return this;
+  }
+
+  public List<ReleaseSummary> getSummaries() {
+    return summaries;
+  }
+
+  /**
+   * @return the specific GitHub api token to use for this repository if there is one
+   */
+  public Optional<String> getGitHubApiToken() {
+    return gitHubApiToken;
   }
 }
