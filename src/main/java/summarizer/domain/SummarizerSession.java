@@ -87,7 +87,9 @@ public final class SummarizerSession {
             
             Keep a link to the issue or PR in each summarized issue.
             
-            Provide the summary as markdown without any additional text before and after
+            Include a representative emoji in each category header.
+            
+            Provide the summary as markdown without any preamble, or additional text before and after, so that it can be published as is.
             </instructions>
             Here are the github release notes for
             """ + repositoryIdentifier.repo() + " " + gitHubReleaseDetails.name() + " in markdown: \n<data>\n" +
@@ -135,8 +137,11 @@ public final class SummarizerSession {
           .map(TextBlock::text)
           .reduce("", (str1, str2) -> str1 + str2);
 
-      infoLog("Summary complete: " + summaryText);
-
+      if (logger.isDebugEnabled()) {
+        debugLog("Summary: " + summaryText);
+      } else {
+        infoLog("Summary complete");
+      }
       if (summaryText.isBlank()) throw new RuntimeException("Empty response");
       else {
         return CompletableFuture.completedFuture(new SummaryResult(gitHubReleaseDetails.id(), gitHubReleaseDetails.name(), repositoryIdentifier, summaryText));
@@ -160,7 +165,7 @@ public final class SummarizerSession {
           gitHubApiClient.getDetails(repositoryIdentifier.owner(), repositoryIdentifier.repo(), issueId);
 
       return futureIssueDetails.thenApply(issueDetails -> {
-        infoLog("Details back from github for issue " + issueId + " (tool use id [" + toolUseBlock.id() + "]: " + issueDetails);
+        debugLog("Details back from github for issue " + issueId + " (tool use id [" + toolUseBlock.id() + "]: " + issueDetails);
 
         return ToolResultBlockParam.builder()
             .toolUseId(toolUseBlock.id())

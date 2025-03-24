@@ -11,6 +11,7 @@ import summarizer.domain.RepositoryIdentifier;
 import summarizer.domain.RepositoryState;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,6 +45,8 @@ public class GitHubRepositoryEntity extends EventSourcedEntity<RepositoryState, 
 
   public record LatestSeenRelease(Optional<Long> id, Optional<String> gitHubApiToken) {}
 
+  public record Summaries(List<ReleaseSummary> summaries) {}
+
   public Effect<Done> setUp(SetUpRepository setUpRepository) {
     if (currentState() != null) {
       throw new IllegalStateException("Repository [" + commandContext().entityId() + "] is already previously setup");
@@ -67,8 +70,12 @@ public class GitHubRepositoryEntity extends EventSourcedEntity<RepositoryState, 
         .thenReply(ignored -> done());
   }
 
-  public ReadOnlyEffect<List<ReleaseSummary>> getSummaries() {
-    return effects().reply(currentState().getSummaries());
+  public ReadOnlyEffect<Summaries> getSummaries() {
+    if (currentState() != null) {
+      return effects().reply(new Summaries(currentState().getSummaries()));
+    } else {
+      return effects().reply(new Summaries(Collections.emptyList()));
+    }
   }
 
   @Override

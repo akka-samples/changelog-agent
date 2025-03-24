@@ -34,7 +34,7 @@ public final class RepositoryState {
   }
 
   public List<ReleaseSummary> getSummaries() {
-    return summaries;
+    return summaries; // defensive copy
   }
 
   /**

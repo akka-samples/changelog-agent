@@ -42,7 +42,10 @@ is added, to use for interactions for that repository.
 
 Set up a repository for tracking, this will trigger a summary pretty quickly:
 
-A GitHub API access token for the specific repository can be provided through the body JSON field ""
+A GitHub API access token for the specific repository can be provided through the body JSON field "gitHubApiToken", however
+note that providing a key that allows for access to a private repository will pass potentially private information from
+the release notes and issues of that project to Anthropic Claude.
+
 ```shell
 curl http://localhost:9000/repo/akka/akka \
   --header "Content-Type: application/json" \
@@ -52,7 +55,7 @@ curl http://localhost:9000/repo/akka/akka \
 
 Fetch generated and stored summaries for a given project
 ```shell 
-curl http://localhost:9000/repo/akka/akka
+curl http://localhost:9000/repo/akka/akka/summaries
 ```
 
 Trigger a one-off summary of the latest release (can be run without any prior calls). This is useful for playing around

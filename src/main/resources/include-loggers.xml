@@ -9,5 +9,5 @@
      when the application runs. 
  -->
 <included>
-    <logger name="org.example" level="INFO"/>
+    <logger name="summarizer" level="INFO"/>
 </included>

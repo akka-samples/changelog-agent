@@ -1,10 +1,19 @@
 package summarizer.api;
 
+import akka.http.javadsl.model.ContentTypes;
+import akka.http.javadsl.model.HttpCharset;
+import akka.http.javadsl.model.HttpCharsets;
+import akka.http.javadsl.model.HttpEntities;
+import akka.http.javadsl.model.HttpResponse;
+import akka.http.javadsl.model.MediaType;
+import akka.http.javadsl.model.MediaTypes;
+import akka.http.javadsl.model.ResponseEntity;
 import akka.javasdk.annotations.Acl;
 import akka.javasdk.annotations.http.HttpEndpoint;
 import akka.javasdk.annotations.http.*;
 import akka.javasdk.client.ComponentClient;
 import akka.javasdk.http.AbstractHttpEndpoint;
+import akka.javasdk.http.HttpResponses;
 import summarizer.application.GitHubRepositoryEntity;
 import summarizer.domain.ReleaseSummary;
 import summarizer.integration.GitHubApiClient;
@@ -47,10 +56,16 @@ public class GitHubRepositoryEndpoint extends AbstractHttpEndpoint {
   }
 
   @Get("/{owner}/{repo}/summaries")
-  public CompletionStage<List<ReleaseSummary>> getSummaries(String owner, String repo) {
+  public CompletionStage<HttpResponse> getSummaries(String owner, String repo) {
     return componentClient.forEventSourcedEntity(GitHubRepositoryEntity.entityIdFor(owner, repo))
-        .method(GitHubRepositoryEntity::getSummaries)
-        .invokeAsync();
+      .method(GitHubRepositoryEntity::getSummaries)
+      .invokeAsync().thenApply(summariesResponse  -> {
+        String markdownForSummaries = summariesResponse.summaries().stream()
+            .map(ReleaseSummary::summary)
+            .reduce("# Releases\n\n", (acc, summary) -> acc + "\n\n" + summary);
+
+        return HttpResponses.ok().withEntity(HttpEntities.create(ContentTypes.create(MediaTypes.TEXT_MARKDOWN, HttpCharsets.UTF_8), markdownForSummaries));
+      });
   }
 
 }
