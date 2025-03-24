@@ -1,20 +1,10 @@
 # github-changelog-summarizer
 
+## What the sample is/does
 
-## Design sketch
+An Akka service that showcases Agentic AI
 
-Entity representing each github repo to track, and what target audiences to provide summaries for.
-
-timer checking releases at some interval, when there is a release, trigger LLM workflow
-
-feed release note to LLM for summary, provide tool to read more details in issue/ and PR descriptions, 
-LLM should make a summary of most important features, separate lists of all features, all bugfixes and dependency bumps. 
-It should filter out changes to the build infrastructure and CI workflows.
-
-
-## What the sample does
-
-Creates an improved summary, every time there is a release from a GitHub repository.
+The agent keeps track of and creates an improved summaries, every time there is a release from set up GitHub repositories.
 
 ## Design overview
 
