@@ -90,7 +90,7 @@ public final class GitHubApiClient {
     return headers;
   }
 
-  public CompletionStage<List<ReleaseDetails>> listLast5Releases(String owner, String repository) {
+  public List<ReleaseDetails> listLast5Releases(String owner, String repository) {
     // https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#list-releases
     return httpClient.GET("/repos/" + owner + "/" + repository + "/releases")
         .withHeaders(
@@ -105,38 +105,37 @@ public final class GitHubApiClient {
             throw new RuntimeException("Failed to parse github api response", e);
           }
         })
-        .invokeAsync()
-        .thenApply(StrictResponse::body);
+        .invoke().body();
   }
 
-  public CompletionStage<ReleaseDetails> getLatestRelease(String owner, String repository) {
+  public ReleaseDetails getLatestRelease(String owner, String repository) {
     // https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#get-the-latest-release
     return httpClient.GET("/repos/" + owner + "/" + repository + "/releases/latest")
         .withHeaders(
             headers(
                 Accept.create(MediaRanges.create(MediaTypes.applicationWithOpenCharset("vnd.github+json"))))
         ).responseBodyAs(ReleaseDetails.class)
-        .invokeAsync()
-        .thenApply(StrictResponse::body);
+        .invoke().body();
   }
 
-  public CompletionStage<IssueDetails> getDetails(String owner, String repository, String issueNumber) {
+  public IssueDetails getDetails(String owner, String repository, String issueNumber) {
     // https://docs.github.com/en/rest/issues/issues?apiVersion=2022-11-28#get-an-issue
-    return httpClient.GET("/repos/" + owner + "/" + repository + "/issues/" + issueNumber)
+    var response = httpClient.GET("/repos/" + owner + "/" + repository + "/issues/" + issueNumber)
         .withHeaders(headers(
             Accept.create(MediaRanges.create(MediaTypes.applicationWithOpenCharset("vnd.github.raw+json")))
         ))
         .responseBodyAs(IssueDetails.class)
-        .invokeAsync()
-        .thenApply(response -> switch (response.status().intValue()) {
-          case 200 -> response.body();
-          case 301 ->
-              throw new RuntimeException("Issue " + issueNumber + " was transferred to another repository (" + response.httpResponse().getHeader(Location.class) + ")");
-          case 404 ->
-              throw new RuntimeException("Issue " + issueNumber + " was not found or transferred to another repository we dont have access to");
-          case 410 -> throw new RuntimeException("Issue " + issueNumber + " was deleted");
-          default ->
-              throw new RuntimeException("Unexpected response code " + response.status().intValue() + " when trying to get details for issue " + issueNumber);
-        });
+        .invoke();
+
+    return switch (response.status().intValue()) {
+      case 200 -> response.body();
+      case 301 ->
+          throw new RuntimeException("Issue " + issueNumber + " was transferred to another repository (" + response.httpResponse().getHeader(Location.class) + ")");
+      case 404 ->
+          throw new RuntimeException("Issue " + issueNumber + " was not found or transferred to another repository we dont have access to");
+      case 410 -> throw new RuntimeException("Issue " + issueNumber + " was deleted");
+      default ->
+          throw new RuntimeException("Unexpected response code " + response.status().intValue() + " when trying to get details for issue " + issueNumber);
+    };
   }
 }

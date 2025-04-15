@@ -2,33 +2,34 @@ package summarizer.api;
 
 import akka.http.javadsl.model.HttpResponse;
 import akka.javasdk.annotations.Acl;
-import akka.javasdk.annotations.http.Get;
 import akka.javasdk.annotations.http.HttpEndpoint;
 import akka.javasdk.annotations.http.Post;
 import akka.javasdk.http.AbstractHttpEndpoint;
 import akka.javasdk.http.HttpResponses;
 import akka.stream.javadsl.Source;
-import com.anthropic.client.AnthropicClientAsync;
-import summarizer.domain.SummarizerSession;
+import com.anthropic.client.AnthropicClient;
 import summarizer.domain.RepositoryIdentifier;
+import summarizer.domain.SummarizerSession;
 import summarizer.integration.GitHubApiClient;
 
-import java.util.List;
-import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 /**
- * Some test endpoints to play around with the entity and summarization
+ * Some test endpoints to play around with the entity and summarization, mostly meant for local testing
  */
 @Acl(allow = @Acl.Matcher(principal = Acl.Principal.INTERNET))
 @HttpEndpoint("/testing/repo")
 public class TestingEndpoint extends AbstractHttpEndpoint {
 
-  private final AnthropicClientAsync anthropicClient;
+  private final AnthropicClient anthropicClient;
   private final GitHubApiClient gitHubApiClient;
+  private final Executor vtExecutor;
 
-  public TestingEndpoint(AnthropicClientAsync anthropicClient, GitHubApiClient gitHubApiClient) {
+  public TestingEndpoint(AnthropicClient anthropicClient, GitHubApiClient gitHubApiClient, Executor vtExecutor) {
     this.anthropicClient = anthropicClient;
     this.gitHubApiClient = gitHubApiClient;
+    this.vtExecutor = vtExecutor;
   }
 
   // fire off a summarization for a repo, don't store anything, just return the result
@@ -40,13 +41,15 @@ public class TestingEndpoint extends AbstractHttpEndpoint {
           .map(gitHubApiClient::withApiToken)
           .orElse(gitHubApiClient);
 
-    var futureSummary = githubApiClientWithAuth.getLatestRelease(owner, repo).thenCompose(releaseDetails -> {
-      var summarizer = new SummarizerSession(githubApiClientWithAuth, anthropicClient, new RepositoryIdentifier(owner, repo), releaseDetails);
-      return summarizer.summarize();
-    });
+    var releaseDetails = githubApiClientWithAuth.getLatestRelease(owner, repo);
+
+    var summarizer = new SummarizerSession(githubApiClientWithAuth, anthropicClient, new RepositoryIdentifier(owner, repo), releaseDetails);
+
+    // Fire off slow summarization, but don't wait on the completion here, the HTTP client would time out the request
+    var futureSummary = CompletableFuture.supplyAsync(summarizer::summarize, vtExecutor);
 
     // response is too slow to return like a normal response, so send as a single element stream
-    // (this will work locally but not deployed where there is an inbetween timeout )
+    // (this will work locally but not deployed where there is an inbetween timeout in the ingress)
     return HttpResponses.serverSentEvents(Source.fromCompletionStage(futureSummary));
   }
 

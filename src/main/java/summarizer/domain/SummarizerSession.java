@@ -1,6 +1,7 @@
 package summarizer.domain;
 
 import akka.javasdk.JsonSupport;
+import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.AnthropicClientAsync;
 import com.anthropic.core.JsonValue;
 import com.anthropic.models.messages.ContentBlockParam;
@@ -57,18 +58,18 @@ public final class SummarizerSession {
   private final Logger logger = LoggerFactory.getLogger(SummarizerSession.class);
 
   private final GitHubApiClient gitHubApiClient;
-  private final AnthropicClientAsync anthropicClient;
+  private final AnthropicClient anthropicClient;
   private final RepositoryIdentifier repositoryIdentifier;
   private final GitHubApiClient.ReleaseDetails gitHubReleaseDetails;
 
-  public SummarizerSession(GitHubApiClient gitHubApiClient, AnthropicClientAsync anthropicClient, RepositoryIdentifier repositoryIdentifier, GitHubApiClient.ReleaseDetails gitHubReleaseDetails) {
+  public SummarizerSession(GitHubApiClient gitHubApiClient, AnthropicClient anthropicClient, RepositoryIdentifier repositoryIdentifier, GitHubApiClient.ReleaseDetails gitHubReleaseDetails) {
     this.gitHubApiClient = gitHubApiClient;
     this.anthropicClient = anthropicClient;
     this.repositoryIdentifier = repositoryIdentifier;
     this.gitHubReleaseDetails = gitHubReleaseDetails;
   }
 
-  public CompletionStage<SummaryResult> summarize() {
+  public SummaryResult summarize() {
     // FIXME target audience
     // FIXME perhaps a project overview would make sense?
     infoLog("Starting summarization");
@@ -95,49 +96,39 @@ public final class SummarizerSession {
             """ + repositoryIdentifier.repo() + " " + gitHubReleaseDetails.name() + " in markdown: \n<data>\n" +
             gitHubReleaseDetails.body() + "\n</data>");
 
-    return anthropicClient.messages().create(paramsBuilder.build()).thenCompose(response -> loopUntilDone(paramsBuilder, response));
-  }
-
-  private CompletionStage<SummaryResult> loopUntilDone(MessageCreateParams.Builder previousParamsBuilder, Message response) {
-    if (response.stopReason().equals(Optional.of(Message.StopReason.TOOL_USE))) {
+    Message latestResponse = anthropicClient.messages().create(paramsBuilder.build());
+    while (latestResponse.stopReason().equals(Optional.of(Message.StopReason.TOOL_USE))) {
       // claude wants us to call one or more tools
       // FIXME could it ever be a mix of other types of content blocks?
       infoLog("Tool requests from AI");
-      List<CompletableFuture<ToolResultBlockParam>> futureToolResults =
-          response.content().stream().flatMap(contentBlock -> contentBlock.toolUse().stream())
-              .map(toolUseBlock ->
-                  toolResultFor(toolUseBlock).toCompletableFuture())
-              .toList();
+      List<ToolResultBlockParam> toolResults =
+          latestResponse.content().stream().flatMap(contentBlock -> contentBlock.toolUse().stream())
+              .map(this::toolResultFor).toList();
 
-      var whenAllCompleted = CompletableFuture.allOf(futureToolResults.toArray(new CompletableFuture[futureToolResults.size()]));
-      CompletableFuture<List<ToolResultBlockParam>> allCompleted =
-          whenAllCompleted.thenApply(ignored -> futureToolResults.stream().map(CompletableFuture::join).toList());
 
       // send new query including tool results to anthropic
-      return allCompleted.thenCompose(toolResults -> {
-        infoLog(toolResults.size()  + " tool results to send to AI");
-        var newParamsBuilder = previousParamsBuilder
-            .addMessage(response)
+      infoLog(toolResults.size()  + " tool results to send to AI");
+      var newParamsBuilder = paramsBuilder
+            .addMessage(latestResponse)
             .addUserMessageOfBlockParams(toolResults.stream().map(ContentBlockParam::ofToolResult).toList());
 
-        var newParams = newParamsBuilder.build();
+      var newParams = newParamsBuilder.build();
 
-        if (logger.isDebugEnabled()) {
-          debugLog("Next request to AI " + JsonSupport.encodeToAkkaByteString(newParams).utf8String());
-        }
+      if (logger.isDebugEnabled()) {
+        debugLog("Next request to AI " + JsonSupport.encodeToAkkaByteString(newParams).utf8String());
+      }
 
-        return anthropicClient.messages().create(newParams)
-            .thenCompose(newResponse -> loopUntilDone(newParamsBuilder, newResponse));
-      });
-    } else if (response.stopReason().equals(Optional.of(Message.StopReason.END_TURN))) {
+      latestResponse = anthropicClient.messages().create(newParams);
+    }
+
+    if (latestResponse.stopReason().equals(Optional.of(Message.StopReason.END_TURN))) {
       infoLog("End turn from AI");
       // done
-      // FIXME could it ever be a mix of other types of content blocks?
-      var summaryText = response.content().stream().flatMap(contentBlock -> contentBlock.text().stream())
+      var summaryText = latestResponse.content().stream().flatMap(contentBlock -> contentBlock.text().stream())
           .map(TextBlock::text)
           .reduce("", (str1, str2) -> str1 + str2);
 
-      var tokensUsed = "(tokens used: in: " + response.usage().inputTokens() + ", out: " + response.usage().outputTokens() + ")";
+      var tokensUsed = "(tokens used: in: " + latestResponse.usage().inputTokens() + ", out: " + latestResponse.usage().outputTokens() + ")";
       if (logger.isDebugEnabled()) {
         debugLog("Summary " + tokensUsed + ": " + summaryText);
       } else {
@@ -145,36 +136,33 @@ public final class SummarizerSession {
       }
       if (summaryText.isBlank()) throw new RuntimeException("Empty response");
       else {
-        return CompletableFuture.completedFuture(new SummaryResult(gitHubReleaseDetails.id(), gitHubReleaseDetails.name(), repositoryIdentifier, summaryText));
+        return new SummaryResult(gitHubReleaseDetails.id(), gitHubReleaseDetails.name(), repositoryIdentifier, summaryText);
       }
-    } else if (response.stopReason().equals(Optional.of(Message.StopReason.MAX_TOKENS))) {
+    } else if (latestResponse.stopReason().equals(Optional.of(Message.StopReason.MAX_TOKENS))) {
       errorLog("Max tokens reached");
       throw new RuntimeException("Max tokens reached");
     } else {
-      errorLog("Unexpected stop sequence from AI " + response.stopSequence());
-      throw new IllegalStateException("Unexpected stop sequence: " + response.stopSequence());
+      errorLog("Unexpected stop sequence from AI " + latestResponse.stopSequence());
+      throw new IllegalStateException("Unexpected stop sequence: " + latestResponse.stopSequence());
     }
   }
 
-  private CompletionStage<ToolResultBlockParam> toolResultFor(ToolUseBlock toolUseBlock) {
+  private ToolResultBlockParam toolResultFor(ToolUseBlock toolUseBlock) {
     if (toolUseBlock.name().equals(FETCH_ISSUE_DETAILS_TOOL_NAME)) {
-      // Note: issue id parameter is required
-      Map<String, JsonValue> inputMap = (Map<String, JsonValue>) toolUseBlock._input().asObject().get();
+      // Note: issue id parameter is required, so will not throw
+      // Note: return type is kotlin stdlib map, hence the unchecked cast warning
+      Map<String, JsonValue> inputMap = (Map<String, JsonValue>) toolUseBlock._input().asObject().orElseThrow();
       String issueId = inputMap.get("issueId").asNumber().get().toString();
       infoLog("(tool) fetching additional details for issue: " + issueId + " (tool use id [" + toolUseBlock.id() + "]");
-      var futureIssueDetails =
-          gitHubApiClient.getDetails(repositoryIdentifier.owner(), repositoryIdentifier.repo(), issueId);
+      var issueDetails = gitHubApiClient.getDetails(repositoryIdentifier.owner(), repositoryIdentifier.repo(), issueId);
+      debugLog("Details back from github for issue " + issueId + " (tool use id [" + toolUseBlock.id() + "]: " + issueDetails);
 
-      return futureIssueDetails.thenApply(issueDetails -> {
-        debugLog("Details back from github for issue " + issueId + " (tool use id [" + toolUseBlock.id() + "]: " + issueDetails);
-
-        return ToolResultBlockParam.builder()
-            .toolUseId(toolUseBlock.id())
-            .content(
-                (issueDetails.title() == null ? "" : ("##" + issueDetails.title() + "\n")) +
-                    (issueDetails.body() == null ? "" : issueDetails.body()))
-            .build();
-      });
+      return ToolResultBlockParam.builder()
+          .toolUseId(toolUseBlock.id())
+          .content(
+              (issueDetails.title() == null ? "" : ("##" + issueDetails.title() + "\n")) +
+                  (issueDetails.body() == null ? "" : issueDetails.body()))
+          .build();
     } else {
       throw new IllegalStateException("Unexpected tool name: " + toolUseBlock.name());
     }
