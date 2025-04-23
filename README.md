@@ -1,4 +1,4 @@
-# github-changelog-summarizer
+# GitHub changelog summarizer
 
 ## What the sample is/does
 
@@ -53,3 +53,131 @@ with changes to the prompt:
 curl http://localhost:9000/testing/repo/akka/akka-sdk/summarize-latest \
   -XPOST
 ```
+
+## System Architecture
+
+### Core Components
+
+#### 1. Repository Entity
+
+- **Event-sourced entity** representing a GitHub repository
+- Stores repository metadata and generated summaries
+- Manages the state of tracked releases
+
+#### 2. Timed Action Scheduler
+
+- Periodically polls GitHub for new releases
+- Triggers summarization when new releases are detected
+
+#### 3. Summarization Session
+
+- Coordinates the interaction with Anthropic Claude LLM
+- Provides tools for the LLM to fetch additional information about issues and PRs
+- Processes the final summary
+
+#### 4. GitHub API Client
+
+- Handles communication with GitHub's API
+- Fetches release notes, issue details, and PR information
+- Supports both anonymous and authenticated access
+
+#### 5. Anthropic Client
+
+- Manages communication with Anthropic's Claude LLM
+- Sends prompts and processes responses
+- Handles tool usage requests from the LLM
+
+#### 6. Summary Consumer
+
+- Listens for newly generated summaries
+- Currently logs the summaries (could be extended to publish to other channels)
+
+#### 7. HTTP API
+
+- Exposes endpoints for managing repositories and retrieving summaries
+- Includes testing endpoints for triggering one-off summarizations
+
+### LLM Tools Integration
+
+The system leverages Anthropic Claude's function calling capabilities through the following tools:
+
+#### fetchIssueDetails Tool
+
+- **Purpose**: Allows the LLM to request additional context about GitHub issues mentioned in release notes
+- **Input**: GitHub issue ID (integer)
+- **Output**: Detailed information about the issue, including title, description, labels, and comments
+- **Usage**: When release notes contain minimal information about an issue (e.g., just "Fixed #123"), the LLM can use this tool to gather more context for creating a comprehensive summary
+
+The tool integration follows a request-response pattern:
+1. Claude identifies an issue needing more context
+2. Claude calls the fetchIssueDetails tool with the issue ID
+3. The SummarizerSession fetches the details from GitHub
+4. The details are returned to Claude for incorporation into the summary
+
+This agentic approach allows the LLM to autonomously decide when additional information is needed, making the summaries more informative and accurate.
+
+### Component Interactions
+
+#### Repository Registration Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as HTTP API
+    participant Entity as Repository Entity
+    participant Timer as Timed Action
+
+    User->>API: POST /repo/{owner}/{repo}
+    API->>Entity: Create entity if not exists
+    Entity->>Entity: Initialize state
+    Entity->>Timer: Schedule periodic polling
+    API->>User: 200 OK Response
+```
+
+#### Release Detection and Summarization Flow
+
+```mermaid
+sequenceDiagram
+    participant Timer as Timed Action
+    participant Entity as Repository Entity
+    participant GitHub as GitHub API
+    participant Session as Summarizer Session
+    participant Claude as Anthropic Claude
+    participant Consumer as Summary Consumer
+
+    Timer->>Entity: Trigger check for new releases
+    Entity->>GitHub: Get latest release
+    GitHub->>Entity: Return release details
+    
+    alt New release detected
+        Entity->>Session: Start summarization
+        Session->>Claude: Send release notes with tools
+        
+        loop Tool Usage
+            Claude->>Session: Request issue/PR details
+            Session->>GitHub: Fetch requested details
+            GitHub->>Session: Return details
+            Session->>Claude: Provide requested information
+        end
+        
+        Claude->>Session: Return final summary
+        Session->>Entity: Store summary
+        Entity->>Consumer: Notify of new summary
+    end
+```
+
+### Data Flow
+
+```mermaid
+graph TD
+    A[GitHub API] -->|Release Notes| B[Repository Entity]
+    A -->|Issue/PR Details| C[Summarizer Session]
+    B -->|Trigger Summarization| C
+    C -->|Prompt with Tools| D[Anthropic Claude]
+    D -->|Tool Requests| C
+    D -->|Final Summary| C
+    C -->|Store Summary| B
+    B -->|New Summary| E[Summary Consumer]
+    E -->|Log/Publish| F[Output Channel]
+```
+
