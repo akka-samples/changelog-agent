@@ -2,9 +2,7 @@
 
 ## What the sample is/does
 
-An Akka service that showcases Agentic AI
-
-The agent keeps track of and creates an improved summaries, every time there is a release from set up GitHub repositories.
+This showcases an AI assistent implemented with the Akka SDK that observes GitHub releases to automatically summarizes the release contents.
 
 ## Design overview
 
