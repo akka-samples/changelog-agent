@@ -29,12 +29,6 @@ public final class Bootstrap implements ServiceSetup {
         """);
     }
     gitHubApiClient = new GitHubApiClient(httpClientProvider, defaultGitHubApiToken);
-    // Note: uses the `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` environment variables
-    if (!System.getenv().containsKey("ANTHROPIC_API_KEY")) {
-      log.error("No ANTHROPIC_API_KEY found, interactions with anthropic LLM will not work");
-    } else {
-      log.info("Using anthropic access from ANTHROPIC_API_KEY environment variable");
-    }
   }
 
   @Override

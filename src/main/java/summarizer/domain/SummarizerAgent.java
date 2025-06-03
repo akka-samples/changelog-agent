@@ -71,6 +71,7 @@ public final class SummarizerAgent extends Agent {
           "Only ask for issue details once for a given issue id, subsequent calls will return the same information
         """)
     private String getIssueDetails(@Description("The github issue id to get details for") int issueId) {
+      logger.info("Getting issue details for issue id {}", issueId);
       var issueDetails = gitHubApiClient.getDetails(repositoryIdentifier.owner(), repositoryIdentifier.repo(), Integer.toString(issueId));
       return (issueDetails.title() == null ? "" : ("##" + issueDetails.title() + "\n")) +
           (issueDetails.body() == null ? "" : issueDetails.body());
