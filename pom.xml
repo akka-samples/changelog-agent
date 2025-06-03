@@ -4,7 +4,7 @@
   <parent>
     <groupId>io.akka</groupId>
     <artifactId>akka-javasdk-parent</artifactId>
-    <version>3.3.2</version>
+    <version>3.4.0-M1</version>
   </parent>
   
   <groupId>org.example</groupId>
@@ -19,10 +19,5 @@
 
   <dependencies>
     <!-- Your dependencies go here -->
-    <dependency>
-      <groupId>com.anthropic</groupId>
-      <artifactId>anthropic-java</artifactId>
-      <version>0.8.0</version>
-    </dependency>
   </dependencies>
 </project>

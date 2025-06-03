@@ -4,10 +4,6 @@ import akka.javasdk.DependencyProvider;
 import akka.javasdk.ServiceSetup;
 import akka.javasdk.annotations.Setup;
 import akka.javasdk.http.HttpClientProvider;
-import com.anthropic.client.AnthropicClient;
-import com.anthropic.client.AnthropicClientAsync;
-import com.anthropic.client.okhttp.AnthropicOkHttpClient;
-import com.anthropic.client.okhttp.AnthropicOkHttpClientAsync;
 import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +17,6 @@ public final class Bootstrap implements ServiceSetup {
   private final Logger log = LoggerFactory.getLogger(getClass());
 
   private final GitHubApiClient gitHubApiClient;
-  private final AnthropicClient anthropicClient;
 
   public Bootstrap(Config config, HttpClientProvider httpClientProvider) {
     var defaultGitHubApiToken = blankAsEmpty(config.getString("github-api-token"));
@@ -40,7 +35,6 @@ public final class Bootstrap implements ServiceSetup {
     } else {
       log.info("Using anthropic access from ANTHROPIC_API_KEY environment variable");
     }
-    anthropicClient = AnthropicOkHttpClient.fromEnv();
   }
 
   @Override
@@ -51,8 +45,6 @@ public final class Bootstrap implements ServiceSetup {
       public <T> T getDependency(Class<T> aClass) {
         if (aClass.equals(GitHubApiClient.class)) {
           return (T) gitHubApiClient;
-        } else if (aClass.equals(AnthropicClient.class)) {
-          return (T) anthropicClient;
         } else {
           return null;
         }

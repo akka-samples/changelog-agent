@@ -90,6 +90,7 @@ public final class GitHubApiClient {
     return headers;
   }
 
+  @SuppressWarnings("unchecked")
   public List<ReleaseDetails> listLast5Releases(String owner, String repository) {
     // https://docs.github.com/en/rest/releases/releases?apiVersion=2022-11-28#list-releases
     return httpClient.GET("/repos/" + owner + "/" + repository + "/releases")

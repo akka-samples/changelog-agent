@@ -4,17 +4,17 @@ import akka.javasdk.annotations.ComponentId;
 import akka.javasdk.client.ComponentClient;
 import akka.javasdk.timedaction.TimedAction;
 import akka.javasdk.timer.TimerScheduler;
-import com.anthropic.client.AnthropicClient;
 import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import summarizer.domain.ReleaseSummary;
 import summarizer.domain.RepositoryIdentifier;
-import summarizer.domain.SummarizerSession;
+import summarizer.domain.SummarizerAgent;
 import summarizer.integration.GitHubApiClient;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Timed action that checks for a new release, runs summarization if there is a new release, reschedules itself
@@ -27,14 +27,12 @@ public final class CheckForRelease extends TimedAction {
 
   private final ComponentClient componentClient;
   private final GitHubApiClient gitHubApiClient;
-  private final AnthropicClient anthropicClient;
   private final TimerScheduler timerScheduler;
   private final Duration checkInterval;
 
-  public CheckForRelease(ComponentClient componentClient, GitHubApiClient gitHubApiClient, AnthropicClient anthropicClient, TimerScheduler timerScheduler, Config config) {
+  public CheckForRelease(ComponentClient componentClient, GitHubApiClient gitHubApiClient, TimerScheduler timerScheduler, Config config) {
     this.componentClient = componentClient;
     this.gitHubApiClient = gitHubApiClient;
-    this.anthropicClient = anthropicClient;
     this.timerScheduler = timerScheduler;
     this.checkInterval = config.getDuration("new-release-check-interval");
   }
@@ -52,8 +50,11 @@ public final class CheckForRelease extends TimedAction {
     var latestReleaseFromGitHub = authorizedGitHubApiClient.getLatestRelease(repositoryIdentifier.owner(), repositoryIdentifier.repo());
     if (latestSeenRelease.id().isEmpty() || latestSeenRelease.id().get() < latestReleaseFromGitHub.id()) {
       logger.info("Found new release for [{}], starting summarization", repositoryIdentifier);
-      var summarizer = new SummarizerSession(authorizedGitHubApiClient, anthropicClient, repositoryIdentifier, latestReleaseFromGitHub);
-      var summary = summarizer.summarize();
+      var sessionId = UUID.randomUUID().toString();
+      var summary = componentClient.forAgent()
+          .inSession(sessionId)
+          .method(SummarizerAgent::summarize)
+          .invoke(new SummarizerAgent.SummarizeRequest(repositoryIdentifier, latestReleaseFromGitHub));
 
       componentClient.forEventSourcedEntity(GitHubRepositoryEntity.entityIdFor(repositoryIdentifier))
           .method(GitHubRepositoryEntity::addSummary)
@@ -63,7 +64,7 @@ public final class CheckForRelease extends TimedAction {
     }
 
     logger.debug("Scheduling next release check [{}]", Instant.now().plus(checkInterval));
-    timerScheduler.startSingleTimer(repositoryIdentifier.toString(),
+    timerScheduler.createSingleTimer(repositoryIdentifier.toString(),
         checkInterval,
         componentClient.forTimedAction()
             .method(CheckForRelease::checkForNewRelease)
