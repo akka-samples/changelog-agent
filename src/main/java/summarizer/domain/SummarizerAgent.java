@@ -58,7 +58,8 @@ public final class SummarizerAgent extends Agent {
             Here are the github release notes for
             """ + request.repositoryIdentifier.repo() + " " + request.releaseDetails.name() + " in markdown: \n<data>\n" +
             request.releaseDetails.body() + "\n</data>"
-        ).map(summaryText -> {
+        ).responseAs(String.class)
+        .map(summaryText -> {
           logger.info("Summary completed [{}]", releaseString);
             return new SummaryResult(request.releaseDetails.id(), request.releaseDetails.name(), request.repositoryIdentifier, summaryText);
         })
