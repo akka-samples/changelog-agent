@@ -2,6 +2,7 @@ package summarizer.domain;
 
 import akka.javasdk.agent.Agent;
 import akka.javasdk.agent.ModelProvider;
+import akka.javasdk.agent.RemoteMcpTools;
 import akka.javasdk.annotations.ComponentId;
 import akka.javasdk.annotations.Description;
 import akka.javasdk.annotations.FunctionTool;
@@ -25,8 +26,10 @@ public final class SummarizerAgent extends Agent {
     Group changes based on category, features first, then bugfixes, then documentation changes, then dependency bumps. 
     Completely omit changes to the build and continuous integration workflows.
     
-    Numbers with a hash in front signify github issue ids. You can use tools for acquiring more details for an issue id if the release
+    Numbers with a hash in front signify github issue or pull request ids. You can fetch more details for an issue id or pull request id from github if the release
     notes does not contain enough details for an individual change to create a good summary.
+    
+    Add a note for each issue who was the author of the change.
     
     If there is a mention of a CVE for a dependency bump, add that to the issue summary.
     
@@ -53,6 +56,21 @@ public final class SummarizerAgent extends Agent {
     return effects()
         .model(ModelProvider.fromConfig())
         .systemMessage(SYSTEM_MESSAGE)
+        .remoteMcpTools(RemoteMcpTools.fromServer("http://localhost:8000/sse").allowToolNames(name ->
+            name.equals("get_pull_request") || name.equals("get_issue")
+            ).withToolInterceptor(new RemoteMcpTools.ToolInterceptor() {
+          @Override
+          public String interceptRequest(String toolName, String payload) {
+            System.out.println("Intercepting request for tool [" + toolName + "] with payload [" + payload + "]");
+            return payload;
+          }
+
+          @Override
+          public String interceptResponse(String toolName, String payload) {
+            System.out.println("Intercepting response for tool [" + toolName + "] with payload [" + payload + "]");
+            return payload;
+          }
+        }))
         .userMessage("""
            
             Here are the github release notes for
@@ -65,17 +83,4 @@ public final class SummarizerAgent extends Agent {
         })
         .thenReply();
     }
-
-    @FunctionTool(description = """
-        Get more details for an issue id. The id must be a known issue id in the repository of the release notes. 
-          "Use when the release notes does not contain enough information about an issue to provide a summary for it.
-          "Only ask for issue details once for a given issue id, subsequent calls will return the same information
-        """)
-    private String getIssueDetails(@Description("The github issue id to get details for") int issueId) {
-      logger.info("Getting issue details for issue id {}", issueId);
-      var issueDetails = gitHubApiClient.getDetails(repositoryIdentifier.owner(), repositoryIdentifier.repo(), Integer.toString(issueId));
-      return (issueDetails.title() == null ? "" : ("##" + issueDetails.title() + "\n")) +
-          (issueDetails.body() == null ? "" : issueDetails.body());
-    }
-
 }

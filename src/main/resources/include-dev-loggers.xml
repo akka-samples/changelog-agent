@@ -10,4 +10,5 @@
  -->
 <included>
     <logger name="summarizer" level="INFO"/>
+    <logger name="kalix.runtime.agent.Agent" level="DEBUG"/>
 </included>

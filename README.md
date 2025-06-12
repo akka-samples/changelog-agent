@@ -18,6 +18,13 @@ The interactions with Anthropic Claude is using the [Anthropic Java SDK](https:/
 
 ## Running the sample
 
+Start local github MCP server
+
+npx -y supergateway --stdio "docker run -i --rm \
+  -e GITHUB_PERSONAL_ACCESS_TOKEN=<token> \
+  -e GITHUB_READ_ONLY=1 \
+  ghcr.io/github/github-mcp-server"
+
 To interact with the Anthropic LLM the environment variables ANTHROPIC_API_KEY and or ANTHROPIC_AUTH_TOKEN must be set
 to tokens gotten from the [Anthropic console](https://console.anthropic.com/)
 
