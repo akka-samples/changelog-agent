@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import summarizer.domain.ReleaseSummary;
 import summarizer.domain.RepositoryIdentifier;
-import summarizer.domain.SummarizerAgent;
 import summarizer.integration.GitHubApiClient;
 
 import java.time.Duration;

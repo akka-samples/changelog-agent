@@ -9,11 +9,10 @@ import akka.javasdk.http.AbstractHttpEndpoint;
 import akka.javasdk.http.HttpResponses;
 import akka.stream.javadsl.Source;
 import summarizer.domain.RepositoryIdentifier;
-import summarizer.domain.SummarizerAgent;
+import summarizer.application.SummarizerAgent;
 import summarizer.integration.GitHubApiClient;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Some test endpoints to play around with the entity and summarization, mostly meant for local testing

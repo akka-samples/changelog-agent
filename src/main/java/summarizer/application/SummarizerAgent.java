@@ -1,10 +1,11 @@
-package summarizer.domain;
+package summarizer.application;
 
 import akka.javasdk.agent.Agent;
 import akka.javasdk.agent.ModelProvider;
 import akka.javasdk.annotations.ComponentId;
 import akka.javasdk.annotations.Description;
 import akka.javasdk.annotations.FunctionTool;
+import summarizer.domain.RepositoryIdentifier;
 import summarizer.integration.GitHubApiClient;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
@@ -17,7 +18,8 @@ public final class SummarizerAgent extends Agent {
   public record SummarizeRequest(RepositoryIdentifier repositoryIdentifier, GitHubApiClient.ReleaseDetails releaseDetails) { }
 
 
-  private static final String SYSTEM_MESSAGE = """
+  private static final String SYSTEM_MESSAGE =
+    """
     You are a technical writer
     
     Summarize release notes taken from github so that they are suitable for a developer or user of the project.
@@ -35,7 +37,7 @@ public final class SummarizerAgent extends Agent {
     Include a representative emoji in each category header.
     
     Provide the summary as markdown without any preamble, or additional text before and after, so that it can be published as is.
-    """.trim();
+    """.stripIndent();
 
   private final Logger logger = LoggerFactory.getLogger(SummarizerAgent.class);
 
