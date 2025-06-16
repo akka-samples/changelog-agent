@@ -34,7 +34,7 @@ public final class NewRepoListener extends Consumer {
       var repositoryId = messageContext().eventSubject().get();
       logger.info("Saw repository created [{}] scheduling immediate check for release", repositoryId);
 
-      timerScheduler.startSingleTimer(repositoryId, Duration.ofSeconds(1),
+      timerScheduler.createSingleTimer(repositoryId, Duration.ofSeconds(1),
           componentClient.forTimedAction()
               .method(CheckForRelease::checkForNewRelease)
               .deferred(GitHubRepositoryEntity.identifierFor(repositoryId)));
