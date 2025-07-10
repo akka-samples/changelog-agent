@@ -18,8 +18,9 @@ The interactions with Anthropic Claude is using the [Anthropic Java SDK](https:/
 
 ## Running the sample
 
-To interact with the Anthropic LLM the environment variables ANTHROPIC_API_KEY and or ANTHROPIC_AUTH_TOKEN must be set
-to tokens gotten from the [Anthropic console](https://console.anthropic.com/)
+To interact with the Anthropic LLM the environment variable ANTHROPIC_API_KEY must be set
+to tokens gotten from the [Anthropic console](https://console.anthropic.com/) Alternatively, change the `application.
+conf` file to use a different model provider.
 
 The GitHub API interactions are done anonymously by default, but a default API key can be defined using environment variable
 `GITHUB_API_TOKEN` or config `github-api-token` in `application.conf`. Specific API keys can also be specified when a GitHub repository
