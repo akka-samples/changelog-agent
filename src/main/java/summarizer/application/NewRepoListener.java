@@ -1,7 +1,7 @@
 package summarizer.application;
 
 import akka.actor.Timers;
-import akka.javasdk.annotations.ComponentId;
+import akka.javasdk.annotations.Component;
 import akka.javasdk.annotations.Consume;
 import akka.javasdk.client.ComponentClient;
 import akka.javasdk.consumer.Consumer;
@@ -15,7 +15,7 @@ import java.time.Duration;
 /**
  * Listens for new repository creation, when seen, schedules checking for releases to summarize
  */
-@ComponentId("new-repo")
+@Component(id = "new-repo")
 @Consume.FromEventSourcedEntity(GitHubRepositoryEntity.class)
 public final class NewRepoListener extends Consumer {
 

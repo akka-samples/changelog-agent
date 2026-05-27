@@ -2,7 +2,7 @@ package summarizer.application;
 
 import akka.javasdk.agent.Agent;
 import akka.javasdk.agent.ModelProvider;
-import akka.javasdk.annotations.ComponentId;
+import akka.javasdk.annotations.Component;
 import akka.javasdk.annotations.Description;
 import akka.javasdk.annotations.FunctionTool;
 import summarizer.domain.RepositoryIdentifier;
@@ -10,7 +10,7 @@ import summarizer.integration.GitHubApiClient;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
-@ComponentId("summarized")
+@Component(id = "summarized")
 public final class SummarizerAgent extends Agent {
 
   public record SummaryResult(long gitHubReleaseId, String releaseName, RepositoryIdentifier repositoryIdentifier,

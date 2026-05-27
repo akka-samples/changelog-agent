@@ -1,6 +1,6 @@
 package summarizer.application;
 
-import akka.javasdk.annotations.ComponentId;
+import akka.javasdk.annotations.Component;
 import akka.javasdk.client.ComponentClient;
 import akka.javasdk.timedaction.TimedAction;
 import akka.javasdk.timer.TimerScheduler;
@@ -19,7 +19,7 @@ import java.util.UUID;
  * Timed action that checks for a new release, runs summarization if there is a new release, reschedules itself
  * for the next check.
  */
-@ComponentId("check-for-release")
+@Component(id = "check-for-release")
 public final class CheckForRelease extends TimedAction {
 
   private final Logger logger = LoggerFactory.getLogger(CheckForRelease.class);
