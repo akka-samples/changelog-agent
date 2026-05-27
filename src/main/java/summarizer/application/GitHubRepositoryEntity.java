@@ -1,7 +1,7 @@
 package summarizer.application;
 
 import akka.Done;
-import akka.javasdk.annotations.ComponentId;
+import akka.javasdk.annotations.Component;
 import akka.javasdk.eventsourcedentity.EventSourcedEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +20,7 @@ import static akka.Done.done;
 /**
  * Represents one GitHub repository, its history of releases and their summaries
  */
-@ComponentId("github-repository")
+@Component(id = "github-repository")
 public class GitHubRepositoryEntity extends EventSourcedEntity<RepositoryState, RepositoryEvent> {
 
   private final Logger logger = LoggerFactory.getLogger(GitHubRepositoryEntity.class);

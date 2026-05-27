@@ -1,13 +1,13 @@
 package summarizer.application;
 
-import akka.javasdk.annotations.ComponentId;
+import akka.javasdk.annotations.Component;
 import akka.javasdk.annotations.Consume;
 import akka.javasdk.consumer.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import summarizer.domain.RepositoryEvent;
 
-@ComponentId("new-summary-publisher")
+@Component(id = "new-summary-publisher")
 @Consume.FromEventSourcedEntity(GitHubRepositoryEntity.class)
 public final class NewSummaryPublisher extends Consumer {
 
